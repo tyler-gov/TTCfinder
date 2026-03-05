@@ -1,0 +1,318 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>TTC Where</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <style>
+:root{--bg:#07090d;--surface:#0d1117;--surface2:#111820;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#dde8f5;--muted:#5f7a96;--accent:#e8343a;--accent2:#ff6b2b;--good:#22c55e;--warn:#eab308;--bad:#ef4444;--mono:'Space Mono','Courier New',monospace;--display:'Syne',sans-serif;--radius-sm:8px;--radius:14px}
+*,*::before,*::after{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font-family:var(--mono);background:var(--bg);color:var(--text);overflow:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}
+.app{height:100vh;display:flex;flex-direction:column}
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;gap:16px;border-bottom:1px solid var(--border);background:rgba(7,9,13,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0}
+.header-left{display:flex;align-items:center;gap:16px}
+.logo-badge{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;background:var(--accent);border-radius:var(--radius-sm)}
+.logo-icon{width:20px;height:20px;border-radius:4px;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:11px}
+.logo-text{font-family:var(--display);font-weight:900;font-size:14px;letter-spacing:1.5px;color:#fff}
+.h1{font-family:var(--display);font-size:16px;font-weight:800}.sub{font-size:10px;color:var(--muted);letter-spacing:.3px;margin-top:1px}
+.mode-badge{display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--border2);border-radius:999px;font-size:10px;font-family:var(--display);font-weight:700;letter-spacing:.5px;color:var(--muted);transition:border-color .4s,color .4s}
+.mode-badge.live{border-color:rgba(34,197,94,0.4);color:var(--good)}.mode-badge.poll{border-color:rgba(234,179,8,0.35);color:var(--warn)}.mode-badge.error{border-color:rgba(239,68,68,0.35);color:var(--bad)}
+.mode-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.mode-badge.live .mode-dot{animation:livepulse 2s ease-in-out infinite}
+@keyframes livepulse{0%,100%{opacity:1}50%{opacity:.3}}
+.status{display:flex;align-items:center;gap:10px;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius);background:rgba(13,17,23,0.6)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 3px rgba(234,179,8,0.2);flex-shrink:0;transition:background .3s,box-shadow .3s}
+.dot.good{background:var(--good);box-shadow:0 0 0 3px rgba(34,197,94,0.2)}.dot.bad{background:var(--bad);box-shadow:0 0 0 3px rgba(239,68,68,0.2)}.dot.pulse{animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-text{font-size:11px;font-weight:700;font-family:var(--display);letter-spacing:.3px}.status-meta{font-size:10px;color:var(--muted)}
+.panel{padding:12px 20px;border-bottom:1px solid var(--border);background:rgba(13,17,23,0.6);flex-shrink:0}
+.filters{display:grid;grid-template-columns:1fr 1fr 1fr 2fr 120px 90px 90px;gap:8px;align-items:end}
+.field label{display:block;font-size:9px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.field input,.field select{width:100%;padding:9px 10px;border:1px solid var(--border2);background:rgba(7,9,13,0.6);color:var(--text);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .15s,background .15s}
+.field input:focus,.field select:focus{border-color:var(--accent);background:rgba(232,52,58,0.04)}
+.field input::placeholder{color:var(--muted)}.field.wide{grid-column:4/5}
+.btn{width:100%;padding:9px 10px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:rgba(232,52,58,0.12);color:var(--text);cursor:pointer;font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:.4px;transition:background .15s,transform .1s}
+.btn:hover{background:rgba(232,52,58,0.22)}.btn:active{transform:scale(.97)}.btn.ghost{border-color:var(--border2);background:rgba(7,9,13,0.4)}.btn.ghost:hover{background:rgba(255,255,255,0.05)}
+.stats{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--border);border-radius:999px;font-size:11px;color:var(--muted);background:rgba(13,17,23,0.5)}
+.pill strong{color:var(--text);font-family:var(--display);font-weight:700}
+.help{margin-top:10px;border:1px solid var(--border);border-radius:var(--radius);background:rgba(7,9,13,0.4);overflow:hidden}
+.help summary{cursor:pointer;padding:9px 12px;font-size:11px;font-weight:700;font-family:var(--display);color:var(--muted);list-style:none;display:flex;align-items:center;gap:6px;user-select:none;transition:color .15s}
+.help summary:hover{color:var(--text)}.help summary::before{content:'▶';font-size:8px;transition:transform .2s}.help[open] summary::before{transform:rotate(90deg)}.help summary::-webkit-details-marker{display:none}
+.help-body{padding:0 12px 12px;color:var(--muted);font-size:11px;line-height:1.6}.help-body p{margin:8px 0 0}.help-body code{color:var(--accent2);font-family:var(--mono)}
+pre.code{margin:8px 0 0;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:rgba(7,9,13,0.7);color:#a8c4e0;font-family:var(--mono);font-size:10px;line-height:1.5;overflow:auto;white-space:pre}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 360px}
+#map{height:100%;width:100%}
+.map-tiles{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(1.05)}
+.leaflet-popup-content-wrapper{background:var(--surface2)!important;border:1px solid var(--border2)!important;border-radius:var(--radius)!important;color:var(--text)!important;box-shadow:0 8px 32px rgba(0,0,0,.6)!important;font-family:var(--mono)!important}
+.leaflet-popup-tip{background:var(--surface2)!important}.leaflet-popup-content{margin:12px 14px!important}
+.sidebar{border-left:1px solid var(--border);background:rgba(7,9,13,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;flex-direction:column;min-height:0}
+.sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.h2{font-family:var(--display);font-size:13px;font-weight:900;letter-spacing:.8px;text-transform:uppercase}
+.list{padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;flex:1;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.card{border:1px solid var(--border);background:rgba(13,17,23,0.7);border-radius:var(--radius);padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s,transform .12s}
+.card:hover{border-color:var(--accent);background:rgba(232,52,58,0.05);transform:translateX(2px)}
+.card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.card-route{font-family:var(--display);font-size:22px;font-weight:900;line-height:1;letter-spacing:-.5px}
+.card-vehicle{font-size:10px;color:var(--muted);text-align:right}.card-vehicle strong{display:block;font-size:13px;color:var(--text)}
+.card-grid{margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.card-kv{display:flex;gap:5px;font-size:10px;overflow:hidden}.k{color:var(--muted);flex-shrink:0}.v{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.age-badge{display:inline-block;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700;background:rgba(34,197,94,0.15);color:var(--good)}
+.age-badge.warn{background:rgba(234,179,8,0.15);color:var(--warn)}.age-badge.old{background:rgba(239,68,68,0.12);color:var(--bad)}
+.empty-state{padding:40px 16px;text-align:center;color:var(--muted);font-size:11px}.empty-state .icon{font-size:32px;display:block;margin-bottom:8px}
+.footer{padding:8px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:10px;background:rgba(7,9,13,0.7);flex-shrink:0;letter-spacing:.3px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+      <div class="logo-badge"><div class="logo-icon">&#x1F68C;</div><div class="logo-text">TTC</div></div>
+      <div><div class="h1">TTC Where</div><div class="sub">Live vehicle positions &middot; GTFS-RT feed</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="modeBadge" class="mode-badge poll"><div class="mode-dot"></div><span id="modeLabel">Connecting&hellip;</span></div>
+      <div class="status">
+        <div id="statusDot" class="dot pulse"></div>
+        <div><div id="statusText" class="status-text">Booting&hellip;</div><div id="statusMeta" class="status-meta">&ndash;</div></div>
+      </div>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="filters">
+      <div class="field"><label for="routeId">Route ID</label><input id="routeId" placeholder="e.g. 504, 29, 1" autocomplete="off"/></div>
+      <div class="field"><label for="vehicleId">Vehicle ID</label><input id="vehicleId" placeholder="exact match" autocomplete="off"/></div>
+      <div class="field"><label for="tripId">Trip ID</label><input id="tripId" placeholder="exact match" autocomplete="off"/></div>
+      <div class="field wide"><label for="quick">Quick search</label><input id="quick" placeholder="route / trip / vehicle / label / stop&hellip;" autocomplete="off"/></div>
+      <div class="field"><label for="refreshMs">Refresh (poll)</label><select id="refreshMs"><option value="3000">3 s</option><option value="5000" selected>5 s</option><option value="10000">10 s</option><option value="20000">20 s</option></select></div>
+      <div class="field"><label>&nbsp;</label><button id="centerOnToronto" class="btn">Center</button></div>
+      <div class="field"><label>&nbsp;</label><button id="clearFilters" class="btn ghost">Clear</button></div>
+    </div>
+    <div class="stats">
+      <div class="pill"><span>Showing</span>&nbsp;<strong id="showingCount">0</strong></div>
+      <div class="pill"><span>Total</span>&nbsp;<strong id="totalCount">0</strong></div>
+      <div class="pill"><span>Last fetch</span>&nbsp;<strong id="lastFetch">&ndash;</strong></div>
+      <div class="pill"><span>Endpoint</span>&nbsp;<strong id="apiLabel">&ndash;</strong></div>
+    </div>
+    <details class="help">
+      <summary>Setup &amp; local testing guide</summary>
+      <div class="help-body">
+        <p><strong>How to test this app</strong></p>
+        <p>CodePen does NOT work for this app &mdash; it blocks direct fetch to external APIs and can't decode protobuf. Instead:</p>
+        <p><strong>Option A &mdash; Open the HTML file directly</strong> (simplest): Save this file to your computer, open it in Chrome/Firefox via <code>File &rarr; Open</code> (<code>file:///…/ttc-where.html</code>). Set <code>API_BASE</code> in the JS to your deployed Cloudflare Worker URL.</p>
+        <p><strong>Option B &mdash; Local dev server</strong>: Run <code>npx serve .</code> or use VS Code Live Server. Open <code>http://localhost:3000/ttc-where.html</code>. Same: set <code>API_BASE</code> to your Worker.</p>
+        <p><strong>Option C &mdash; Run a local proxy too</strong>: If you want to run the proxy locally, install Node and run <code>npx wrangler dev</code> inside your Worker project. Set <code>API_BASE = "http://localhost:8787"</code>.</p>
+        <p><strong>Connection priority (auto)</strong>: SSE push &rarr; WebSocket &rarr; REST polling. Cascades automatically.</p>
+        <p><strong>Cloudflare Worker (polling endpoint)</strong> &mdash; add <code>gtfs-realtime-bindings</code>:</p>
+<pre class="code">import GtfsRealtimeBindings from "gtfs-realtime-bindings";
+export default {
+  async fetch(request) {
+    if (request.method === "OPTIONS") return new Response(null,{status:204,headers:cors()});
+    const url = new URL(request.url);
+    if (!url.pathname.endsWith("/vehicles")) return new Response("Not Found",{status:404,headers:cors()});
+    const resp = await fetch("https://bustime.ttc.ca/gtfsrt/vehicles?debug",{headers:{Accept:"application/x-protobuf"}});
+    if (!resp.ok) return json({error:"Upstream error",status:resp.status},502);
+    const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(new Uint8Array(await resp.arrayBuffer()));
+    const now = Date.now();
+    const entities = (feed.entity||[]).filter(e=>e.vehicle?.position).map(e=>{
+      const v=e.vehicle;
+      return {entity_id:e.id??null,trip:{trip_id:v.trip?.trip_id??null,route_id:v.trip?.route_id??null,direction_id:v.trip?.direction_id??null},vehicle:{vehicle_id:v.vehicle?.id??null,label:v.vehicle?.label??null},position:{lat:v.position.latitude,lon:v.position.longitude,bearing:v.position.bearing??null,speed:v.position.speed??null},stop_id:v.stop_id??null,timestamp:v.timestamp?Number(v.timestamp)*1000:null,age_ms:v.timestamp?now-Number(v.timestamp)*1000:null};
+    });
+    return json({fetched_at:new Date().toISOString(),count:entities.length,entities});
+  }
+};
+function cors(){return{"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET,OPTIONS","Access-Control-Allow-Headers":"Content-Type","Cache-Control":"no-store","Content-Type":"application/json;charset=utf-8"}}
+function json(obj,status=200){return new Response(JSON.stringify(obj),{status,headers:cors()})}</pre>
+      </div>
+    </details>
+  </section>
+
+  <main class="main">
+    <div id="map"></div>
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="h2">Vehicles</div>
+        <button id="fitToMarkers" class="btn ghost" style="width:auto;padding:6px 12px;font-size:11px">Fit view</button>
+      </div>
+      <div id="list" class="list"></div>
+    </aside>
+  </main>
+  <footer class="footer">
+    <span>Click a card or marker to zoom &middot; arrow direction = bearing &middot; colour = data age</span>
+    <span>Data: TTC GTFS-RT VehiclePositions</span>
+  </footer>
+</div>
+<script>
+/* TTC Where v3 — arrow markers + clustering + SSE/WS/poll cascade */
+
+const API_BASE  = "https://YOUR-PROXY.example.com"; // <- SET THIS
+const WS_URL    = ""; // optional override, else derived from API_BASE
+const AGE_WARN  = 30000;
+const AGE_OLD   = 90000;
+const MARKER_SZ = 28;
+const TORONTO   = [43.6532, -79.3832];
+
+const $   = id => document.getElementById(id);
+const els = {
+  statusDot:$("statusDot"),statusText:$("statusText"),statusMeta:$("statusMeta"),
+  modeBadge:$("modeBadge"),modeLabel:$("modeLabel"),
+  routeId:$("routeId"),vehicleId:$("vehicleId"),tripId:$("tripId"),quick:$("quick"),
+  refreshMs:$("refreshMs"),showingCount:$("showingCount"),totalCount:$("totalCount"),
+  lastFetch:$("lastFetch"),apiLabel:$("apiLabel"),centerOnToronto:$("centerOnToronto"),
+  clearFilters:$("clearFilters"),fitToMarkers:$("fitToMarkers"),list:$("list")
+};
+
+let map, clusterGroup, allVehicles=[], visibleMarkers=[], fetchTimer=null;
+let eventSource=null, socket=null, connMode="boot";
+
+function setStatus(kind,text,meta="–"){
+  els.statusDot.className="dot"+(kind==="warn"?" pulse":"")+(kind!=="warn"?" "+kind:"");
+  els.statusText.textContent=text; els.statusMeta.textContent=meta;
+}
+function setMode(mode){
+  connMode=mode;
+  const L={sse:"Live · SSE",ws:"Live · WS",poll:"Polling",error:"Error",boot:"…"};
+  const C={sse:"live",ws:"live",poll:"poll",error:"error",boot:"poll"};
+  els.modeBadge.className="mode-badge "+(C[mode]||"poll");
+  els.modeLabel.textContent=L[mode]||mode;
+}
+
+function initMap(){
+  map=L.map("map",{zoomControl:true}).setView(TORONTO,12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors",className:"map-tiles"}).addTo(map);
+  clusterGroup=L.markerClusterGroup({
+    maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true,
+    iconCreateFunction(cluster){
+      const n=cluster.getChildCount(),d=n<10?36:n<50?42:48,r=d/2,fs=n<100?13:11;
+      return L.divIcon({
+        html:`<svg width="${d}" height="${d}" viewBox="0 0 ${d} ${d}" xmlns="http://www.w3.org/2000/svg"><circle cx="${r}" cy="${r}" r="${r-.5}" fill="rgba(232,52,58,0.18)" stroke="rgba(232,52,58,0.55)" stroke-width="1.5"/><circle cx="${r}" cy="${r}" r="${r-7}" fill="rgba(232,52,58,0.7)"/><text x="${r}" y="${r+fs*.38}" text-anchor="middle" font-family="Syne,sans-serif" font-weight="800" font-size="${fs}" fill="#fff">${n}</text></svg>`,
+        className:"",iconSize:[d,d],iconAnchor:[r,r]
+      });
+    }
+  }).addTo(map);
+}
+
+function makeIcon(bearing,ageClass){
+  const s=MARKER_SZ,r=s/2;
+  const fill=ageClass==="warn"?"#eab308":ageClass==="old"?"#ef4444":"#22c55e";
+  const ring=ageClass==="warn"?"rgba(234,179,8,0.28)":ageClass==="old"?"rgba(239,68,68,0.28)":"rgba(34,197,94,0.28)";
+  const stroke=ageClass==="warn"?"#a16207":ageClass==="old"?"#7f1d1d":"#14532d";
+  const hasBrg=bearing!=null&&!isNaN(Number(bearing));
+  const rot=hasBrg?Number(bearing):0,op=hasBrg?.9:.22;
+  // chevron arrow pointing up: tip at top, notch creates the V cutout at base
+  const tipX=r,tipY=r-r*.52,bL=r-r*.30,bR=r+r*.30,bY=r+r*.38,nY=r+r*.06;
+  const path=`M${tipX},${tipY} L${bL},${bY} L${r},${nY} L${bR},${bY} Z`;
+  const svg=`<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible"><circle cx="${r}" cy="${r}" r="${r}" fill="${ring}"/><circle cx="${r}" cy="${r}" r="${r-2.5}" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/><g transform="rotate(${rot} ${r} ${r})" opacity="${op}"><path d="${path}" fill="rgba(0,0,0,0.72)"/></g></svg>`;
+  return L.divIcon({html:svg,className:"",iconSize:[s,s],iconAnchor:[r,r],popupAnchor:[0,-r-2]});
+}
+
+function buildPopup(v){
+  const age=formatAge(v.age_ms),time=v.timestamp?new Date(v.timestamp).toLocaleTimeString():"–";
+  const brg=v.position?.bearing!=null?Math.round(v.position.bearing)+"°":"–";
+  const spd=v.position?.speed!=null?(v.position.speed*3.6).toFixed(1)+" km/h":"–";
+  return `<div style="font-family:'Space Mono',monospace;font-size:11px;line-height:1.75;color:#dde8f5;min-width:215px"><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:900;margin-bottom:8px;color:#fff">Route ${esc(v.trip?.route_id??"?")} <span style="font-size:11px;font-weight:400;color:#5f7a96">· Veh ${esc(v.vehicle?.vehicle_id??"?")}</span></div><div style="color:#9fb0c4">Trip: ${esc(v.trip?.trip_id??"–")}<br/>Label: ${esc(v.vehicle?.label??"–")}<br/>Stop: ${esc(v.stop_id??"–")}<br/>Bearing: ${brg} &nbsp; Speed: ${spd}<br/>Updated: ${time} <span style="color:#22c55e">(${age} ago)</span></div></div>`;
+}
+
+function buildCard(v,ac){
+  const age=formatAge(v.age_ms),brg=v.position?.bearing!=null?Math.round(v.position.bearing)+"°":"–",spd=v.position?.speed!=null?(v.position.speed*3.6).toFixed(1)+" km/h":"–";
+  return `<div class="card-top"><div class="card-route">${esc(v.trip?.route_id??"–")}</div><div class="card-vehicle"><span>Vehicle</span><strong>${esc(v.vehicle?.vehicle_id??"–")}</strong></div></div><div class="card-grid"><div class="card-kv"><span class="k">Trip</span><span class="v">${esc(v.trip?.trip_id??"–")}</span></div><div class="card-kv"><span class="k">Age</span><span class="v"><span class="age-badge ${ac}">${esc(age)}</span></span></div><div class="card-kv"><span class="k">Bearing</span><span class="v">${brg}</span></div><div class="card-kv"><span class="k">Speed</span><span class="v">${spd}</span></div></div>`;
+}
+
+function getFilters(){return{routeId:els.routeId.value.trim(),vehicleId:els.vehicleId.value.trim(),tripId:els.tripId.value.trim(),quick:els.quick.value.trim().toLowerCase()}}
+
+function matchesFilters(v,f){
+  if(f.routeId&&str(v.trip?.route_id)!==f.routeId)return false;
+  if(f.vehicleId&&str(v.vehicle?.vehicle_id)!==f.vehicleId)return false;
+  if(f.tripId&&str(v.trip?.trip_id)!==f.tripId)return false;
+  if(f.quick){const h=[v.trip?.route_id,v.trip?.trip_id,v.vehicle?.vehicle_id,v.vehicle?.label,v.stop_id,v.entity_id].map(x=>str(x).toLowerCase()).join("|");if(!h.includes(f.quick))return false}
+  return true;
+}
+
+function render(){
+  const f=getFilters(),filtered=allVehicles.filter(v=>matchesFilters(v,f));
+  els.totalCount.textContent=allVehicles.length;els.showingCount.textContent=filtered.length;
+  clusterGroup.clearLayers();els.list.innerHTML="";visibleMarkers=[];
+  if(!filtered.length){els.list.innerHTML='<div class="empty-state"><span class="icon">&#x1F68C;</span>No vehicles match the current filters.</div>';return}
+  const frag=document.createDocumentFragment();
+  for(const v of filtered){
+    const age=v.age_ms??null,ac=age==null?"":age<AGE_WARN?"":age<AGE_OLD?"warn":"old";
+    const marker=L.marker([v.position.lat,v.position.lon],{icon:makeIcon(v.position?.bearing,ac)});
+    marker.bindPopup(buildPopup(v),{maxWidth:280});
+    clusterGroup.addLayer(marker);visibleMarkers.push(marker);
+    const card=document.createElement("div");card.className="card";card.innerHTML=buildCard(v,ac);
+    card.addEventListener("click",()=>clusterGroup.zoomToShowLayer(marker,()=>marker.openPopup()));
+    frag.appendChild(card);
+  }
+  els.list.appendChild(frag);
+}
+
+function ingest(data){allVehicles=Array.isArray(data.entities)?data.entities:[];els.lastFetch.textContent=new Date().toLocaleTimeString();render()}
+
+function startSSE(){
+  const url=`${API_BASE}/vehicles/stream`;
+  console.info("[TTC] SSE:",url);
+  eventSource=new EventSource(url);
+  eventSource.onopen=()=>{setMode("sse");setStatus("good","Live · SSE","Push stream active");stopPolling()};
+  eventSource.onmessage=evt=>{try{ingest(JSON.parse(evt.data));setStatus("good","Live · SSE",allVehicles.length+" vehicles")}catch(e){}};
+  eventSource.onerror=()=>{eventSource.close();eventSource=null;tryWS()};
+}
+
+function tryWS(){
+  const url=WS_URL||API_BASE.replace(/^http/,"ws")+"/vehicles/ws";
+  console.info("[TTC] WS:",url);
+  try{socket=new WebSocket(url)}catch(e){startPolling();return}
+  const t=setTimeout(()=>{if(socket&&socket.readyState!==WebSocket.OPEN){socket.close();socket=null;startPolling()}},4000);
+  socket.onopen=()=>{clearTimeout(t);setMode("ws");setStatus("good","Live · WS","WebSocket connected");stopPolling()};
+  socket.onmessage=evt=>{try{ingest(JSON.parse(evt.data));setStatus("good","Live · WS",allVehicles.length+" vehicles")}catch(e){}};
+  socket.onclose=()=>{clearTimeout(t);if(connMode==="ws"){setStatus("warn","WS closed","Reconnecting…");setTimeout(tryWS,5000)}};
+  socket.onerror=()=>{clearTimeout(t);socket=null;startPolling()};
+}
+
+async function fetchVehicles(){
+  if(!API_BASE||API_BASE.includes("YOUR-PROXY")){setStatus("bad","API_BASE not set","Edit the JS constant at top of script");return}
+  setStatus("warn","Fetching…","Calling proxy");
+  try{
+    const t0=performance.now(),resp=await fetch(`${API_BASE}/vehicles`,{cache:"no-store"}),ms=Math.round(performance.now()-t0);
+    if(!resp.ok){setStatus("bad","Fetch failed","HTTP "+resp.status);return}
+    ingest(await resp.json());setStatus("good","Polling",allVehicles.length+" vehicles · "+ms+"ms");
+  }catch(err){setStatus("bad","Error",err?.message??String(err))}
+}
+function startPolling(){if(connMode!=="poll"){setMode("poll");setStatus("warn","Polling","Push unavailable")}stopPolling();fetchVehicles();fetchTimer=setInterval(fetchVehicles,Number(els.refreshMs.value)||5000)}
+function stopPolling(){if(fetchTimer){clearInterval(fetchTimer);fetchTimer=null}}
+function scheduleLoop(){if(connMode==="poll")startPolling()}
+
+function connect(){
+  if(!API_BASE||API_BASE.includes("YOUR-PROXY")){setMode("error");setStatus("bad","API_BASE not set","Update the JS constant");els.apiLabel.textContent="⚠ not configured";return}
+  els.apiLabel.textContent=API_BASE;setMode("boot");setStatus("warn","Connecting…","SSE → WS → poll");startSSE();
+}
+
+function wireUI(){
+  let db;
+  const dr=()=>{clearTimeout(db);db=setTimeout(render,120)};
+  [els.routeId,els.vehicleId,els.tripId,els.quick].forEach(el=>el.addEventListener("input",dr));
+  els.refreshMs.addEventListener("change",scheduleLoop);
+  els.centerOnToronto.addEventListener("click",()=>map.setView(TORONTO,12));
+  els.clearFilters.addEventListener("click",()=>{[els.routeId,els.vehicleId,els.tripId,els.quick].forEach(el=>el.value="");render()});
+  els.fitToMarkers.addEventListener("click",()=>{try{const b=clusterGroup.getBounds();if(b.isValid())map.fitBounds(b.pad(.1))}catch(_){}});
+}
+
+const str=v=>(v??"").toString().trim();
+const fmt=(n,d=5)=>typeof n==="number"?n.toFixed(d):"–";
+function formatAge(ms){if(ms==null)return"–";const s=Math.max(0,Math.round(ms/1000));return s<60?s+"s":Math.round(s/60)+"m"}
+function esc(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
+
+(function boot(){initMap();wireUI();connect()})();
+</script>
+</body>
+</html>
